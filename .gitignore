@@ -1,0 +1,3 @@
+setup/*.local.*
+setup/.token
+node_modules/

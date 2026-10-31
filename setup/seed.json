@@ -1,0 +1,168 @@
+{
+ "rota": {
+  "2026-09-11": "Ross",
+  "2026-09-14": "Ross",
+  "2026-09-18": "Ross",
+  "2026-09-19": "Ross",
+  "2026-09-20": "Ross",
+  "2026-09-21": "Ross",
+  "2026-09-23": "Ross",
+  "2026-10-02": "Ross",
+  "2026-10-03": "Ross",
+  "2026-10-05": "Ross",
+  "2026-10-11": "Ross",
+  "2026-10-12": "Ross",
+  "2026-10-13": "Patrick",
+  "2026-10-14": "Patrick",
+  "2026-10-15": "Ross",
+  "2026-10-16": "Baz",
+  "2026-10-17": "Baz",
+  "2026-10-18": "Baz",
+  "2026-10-19": "Ross",
+  "2026-10-20": "Patrick",
+  "2026-10-21": "Patrick",
+  "2026-10-22": "Baz",
+  "2026-10-23": "Baz",
+  "2026-10-24": "Patrick",
+  "2026-10-25": "Ross",
+  "2026-10-26": "Baz",
+  "2026-10-27": "Ross",
+  "2026-10-28": "Patrick",
+  "2026-10-29": "Patrick",
+  "2026-10-30": "Ross",
+  "2026-10-31": "Baz",
+  "2026-11-01": "Ross",
+  "2026-11-02": "Ross",
+  "2026-11-03": "Patrick",
+  "2026-11-04": "Patrick",
+  "2026-11-05": "Ross",
+  "2026-11-06": "Reset",
+  "2026-11-07": "Baz",
+  "2026-11-08": "Patrick",
+  "2026-11-09": "Baz",
+  "2026-11-10": "Patrick",
+  "2026-11-11": "Patrick",
+  "2026-11-12": "Ross",
+  "2026-11-13": "Closed",
+  "2026-11-14": "Baz",
+  "2026-11-15": "Baz",
+  "2026-11-16": "Baz",
+  "2026-11-17": "Patrick",
+  "2026-11-18": "Patrick",
+  "2026-11-19": "Baz",
+  "2026-11-20": "Closed",
+  "2026-11-21": "Patrick",
+  "2026-11-22": "Ross",
+  "2026-11-23": "Ross",
+  "2026-11-24": "Patrick",
+  "2026-11-25": "Patrick",
+  "2026-11-26": "Baz",
+  "2026-11-27": "Reset",
+  "2026-11-28": "Ross",
+  "2026-11-29": "Ross",
+  "2026-11-30": "TBC"
+ },
+ "shifts": [
+  {
+   "date": "2026-09-11",
+   "note": "Friday evening shift"
+  },
+  {
+   "date": "2026-09-14",
+   "note": "Monday night session (reset day earlier; reset time not counted)"
+  },
+  {
+   "date": "2026-09-18",
+   "note": "Friday evening shift"
+  },
+  {
+   "date": "2026-09-19",
+   "note": "Saturday shift"
+  },
+  {
+   "date": "2026-09-20",
+   "note": "Sunday (not clear this was a rota shift)"
+  },
+  {
+   "date": "2026-09-21",
+   "note": "Monday shift"
+  },
+  {
+   "date": "2026-09-23",
+   "note": "Wednesday shift (rota agreed 19/09, not confirmed worked)"
+  },
+  {
+   "date": "2026-10-02",
+   "note": "Friday shift (rota 24/09, not confirmed worked)"
+  },
+  {
+   "date": "2026-10-03",
+   "note": "Saturday shift"
+  },
+  {
+   "date": "2026-10-05",
+   "note": "Monday evening shift"
+  },
+  {
+   "date": "2026-10-11",
+   "note": "Sunday, swapped with Baz; reset day (reset time not counted separately)"
+  },
+  {
+   "date": "2026-10-12",
+   "note": "Monday; reset day earlier, still there 22:11 (pre-shift reset time not counted)"
+  },
+  {
+   "date": "2026-10-15",
+   "note": "Thursday (rota image)"
+  },
+  {
+   "date": "2026-10-19",
+   "note": "Monday (rota image)"
+  },
+  {
+   "date": "2026-10-25",
+   "note": "Sunday (rota image)"
+  },
+  {
+   "date": "2026-10-30",
+   "note": "Rota ahead. Last Friday opening before the new hours"
+  }
+ ],
+ "logs": [
+  {
+   "id": "l1",
+   "date": "2026-09-07",
+   "cat": "setting",
+   "hours": null,
+   "note": "Set one route before climbing at 12. Hours not known"
+  },
+  {
+   "id": "l3",
+   "date": "2026-09-13",
+   "cat": "setting",
+   "hours": null,
+   "note": "Reset day, stripping the cave from ~1pm. Hours not known"
+  },
+  {
+   "id": "l13",
+   "date": "2026-10-08",
+   "cat": "admin",
+   "hours": 4,
+   "note": "Team meeting at Pat's, 10:00 (management meeting)"
+  },
+  {
+   "id": "l18",
+   "date": "2026-10-21",
+   "cat": "admin",
+   "hours": 4,
+   "note": "Team meeting at Pat's, 10:00"
+  },
+  {
+   "id": "l19",
+   "date": "2026-10-23",
+   "cat": "setting",
+   "hours": 2,
+   "note": "Friday evening setting"
+  }
+ ]
+}
