@@ -81,7 +81,8 @@ export async function removeRota(date, person) {
 
 /* ---------- closed days (anyone can close/reopen) ---------- */
 export async function closeDay(date, reason) {
-  check(await db.from("closures").upsert({ date, reason: reason || "" }, { onConflict: "date" }));
+  // ignoreDuplicates: if someone else already closed it, keep theirs (no UPDATE permission on this table)
+  check(await db.from("closures").upsert({ date, reason: reason || "" }, { onConflict: "date", ignoreDuplicates: true }));
 }
 export async function reopenDay(date) {
   check(await db.from("closures").delete().eq("date", date));

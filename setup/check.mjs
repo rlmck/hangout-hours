@@ -13,9 +13,9 @@ async function signIn(name) {
   const j = await r.json(); if (!r.ok) throw new Error(name + " sign-in failed: " + JSON.stringify(j));
   return j.access_token;
 }
-async function rest(tok, method, path, body) {
+async function rest(tok, method, path, body, prefer) {
   const r = await fetch(URL_ + "/rest/v1/" + path, { method, body: body ? JSON.stringify(body) : undefined,
-    headers: { apikey: KEY, ...(tok ? { Authorization: "Bearer " + tok } : {}), "Content-Type": "application/json", Prefer: "return=representation" } });
+    headers: { apikey: KEY, ...(tok ? { Authorization: "Bearer " + tok } : {}), "Content-Type": "application/json", Prefer: "return=representation" + (prefer ? "," + prefer : "") } });
   const text = await r.text(); let data = null; try { data = JSON.parse(text); } catch {}
   return { status: r.status, ok: r.ok, data };
 }
@@ -50,7 +50,10 @@ const rm = await rest(T.Patrick, "DELETE", "rota?date=eq." + D);
 ok(rm.ok && rm.data.length === 2, "Patrick can take both off");
 
 // closed days: anyone can close/reopen, nobody can fake who closed it
-ok((await rest(T.Patrick, "POST", "closures", { date: D, reason: "check" })).ok, "Patrick can close a day");
+// same request the app sends (api.closeDay): upsert, ignoring duplicates
+const closeAsApp = tok => rest(tok, "POST", "closures?on_conflict=date", { date: D, reason: "check" }, "resolution=ignore-duplicates");
+ok((await closeAsApp(T.Patrick)).ok, "Patrick can close a day");
+ok((await closeAsApp(T.Baz)).ok, "closing an already-closed day doesn't fail");
 ok(!(await rest(T.Baz, "POST", "closures", { date: "2099-06-02", created_by: "00000000-0000-0000-0000-000000000000" })).ok, "closures can't claim someone else closed it");
 ok(!(await rest(null, "POST", "closures", { date: "2099-06-03" })).ok, "signed-out visitors can't close a day");
 const reopen = await rest(T.Ross, "DELETE", "closures?date=eq." + D);
