@@ -1,5 +1,5 @@
 /**
- * CSV export. exportAll() downloads one CSV per table (People, Rota, Logs, Shifts, Expenses),
+ * CSV export. exportAll() downloads one CSV per table (People, Rota, Closed, Logs, Shifts, Expenses),
  * with the same columns as Google Sheets tabs: in a Google Sheet use File > Import > Upload,
  * "Insert new sheet", once per file.
  */

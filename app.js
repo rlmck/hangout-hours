@@ -35,13 +35,19 @@ const store = { get(k){ try{ return JSON.parse(localStorage.getItem(k)||"null");
 /* ---------- shift pattern ----------
    A shift runs from 30 min before opening to 30 min after closing.
    To change the opening hours, add ONE line to PATTERNS with the date it starts (older dates keep their old hours).
-   days = [Sun, Mon, Tue, Wed, Thu, Fri, Sat]; null = closed. */
+   days = [Sun, Mon, Tue, Wed, Thu, Fri, Sat]; null = closed.
+   One-off closed days (bank holidays, events…) are closed from the rota and stored in the database (state.closures). */
 const PATTERNS = [
   {from:"2000-01-01", days:[["09:30","15:00"],["18:00","22:00"],["15:30","22:00"],["15:30","22:00"],["15:30","22:00"],["18:00","22:00"],["09:30","15:00"]]},
   {from:"2026-11-02", days:[["09:30","15:00"],["15:30","22:00"],["15:30","22:00"],["15:30","22:00"],["15:30","22:00"],null,["09:30","15:00"]]},
 ];
 const mins = hm => { const [h,m]=hm.split(":").map(Number); return h*60+m; };
+const closureOn = ds => (state.closures||[]).find(c=>c.date===ds);
 function shiftPattern(ds){
+  const c = closureOn(ds);
+  return c ? {closed:true,oneOff:true,reason:c.reason||"",start:null,end:null,hours:0} : basePattern(ds);
+}
+function basePattern(ds){
   let p = PATTERNS[0]; for (const x of PATTERNS) if (ds>=x.from) p = x;
   const d = p.days[parse(ds).getDay()];
   return d ? {closed:false,start:d[0],end:d[1],hours:(mins(d[1])-mins(d[0]))/60} : {closed:true,start:null,end:null,hours:0};
@@ -51,7 +57,7 @@ const sEnd = s => at(s.date, shiftPattern(s.date).end || "22:00");
 
 /* ---------- state + saving ---------- */
 let me = store.get(ME_KEY);   // "Ross" | "Baz" | "Patrick"
-let state = {rota:[], shifts:[], logs:[], expenses:[]};
+let state = {rota:[], closures:[], shifts:[], logs:[], expenses:[]};
 const sync = t => { $("sync").textContent = (me ? me+" · " : "")+t; };
 let loading = null;
 function load(){
@@ -165,14 +171,14 @@ function renderRota(){
       const who = ppl.length===1 ? '<span class="p">'+esc(PEOPLE[ppl[0]].short)+'</span>'
         : ppl.length ? '<span class="ini">'+ppl.map(q=>'<span style="color:'+PEOPLE[q].c+'">'+PEOPLE[q].ini+'</span>').join("")+'</span>'
         : p.closed ? '<span class="p">Closed</span>' : '<span class="p"></span>';
-      const label = fd(ds)+": "+(ppl.length ? ppl.join(", ") : p.closed ? "closed" : "nobody yet")+(isMe?" (you)":"");
+      const label = fd(ds)+": "+(ppl.length ? ppl.join(", ") : p.closed ? "closed"+(p.reason?" ("+p.reason+")":"") : "nobody yet")+(isMe?" (you)":"");
       cells += '<button class="'+cls+'"'+(style?' style="'+style+'"':'')+' data-day="'+ds+'" aria-label="'+esc(label)+'"><span class="n">'+d+'</span>'+who+'</button>';
     }
     html += '<div class="sec">'+MONSL[m]+' '+y+'<span>You: '+mine+' shift'+(mine===1?"":"s")+', '+fmt(mineH)+'h</span></div>'+
       '<div class="cal"><div class="wk">'+["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(x=>'<div>'+x+'</div>').join("")+'</div><div class="days">'+cells+'</div></div>';
   }
   html += '<div class="pager"><button type="button" data-rp="-1">‹ Earlier</button>'+(rotaOff<0?'<button type="button" data-rp="1">Later ›</button>':'')+'</div>';
-  html += '<p class="hint">Tap a day to see shift times or change who’s on. Changes show for everyone. Past months are read-only.</p>';
+  html += '<p class="hint">Tap a day to see shift times, change who’s on, or close the wall for a day. Changes show for everyone. Past months are read-only.</p>';
   $("rotaBody").innerHTML = html;
 }
 
@@ -332,12 +338,13 @@ $("del").onclick=()=>{
 };
 
 /* ---------- day sheet ---------- */
-let pickDay = null;
-function openPicker(ds){ pickDay = ds; renderPicker(); if (!$("picker").open) $("picker").showModal(); }
+let pickDay = null, closing = false;
+const canClose = ds => ds>=tIso();   // only today and future days can be closed or reopened
+function openPicker(ds){ pickDay = ds; closing = false; renderPicker(); if (!$("picker").open) $("picker").showModal(); }
 function renderPicker(){
   const ds = pickDay, p = shiftPattern(ds), ppl = onDay(ds), ro = readOnlyDay(ds);
   $("pickTitle").textContent = fd(ds);
-  $("pickSub").textContent = p.closed ? "Closed – no shift" : "Shift "+p.start+"–"+p.end+" ("+fmt(p.hours)+"h each)";
+  $("pickSub").textContent = p.oneOff ? "Closed"+(p.reason?" – "+p.reason:"") : p.closed ? "Closed – no shift" : "Shift "+p.start+"–"+p.end+" ("+fmt(p.hours)+"h each)";
   const hrs = q => { const s = shiftOf(q,ds); return s.override!=null ? " · "+fmt(s.hours)+"h" : ""; };
   if (p.closed && !ppl.length){ $("pickBtns").innerHTML = ""; }
   else if (ro || p.closed){
@@ -346,8 +353,20 @@ function renderPicker(){
     $("pickBtns").innerHTML = STAFF.map(q=>{ const on = ppl.includes(q);
       return '<button type="button" data-who="'+q+'" aria-pressed="'+on+'">'+sw(q)+esc(q)+esc(on?hrs(q):"")+(on?'<span class="tick" aria-hidden="true">✓</span>':'')+'</button>'; }).join("");
   }
-  $("pickMore").innerHTML = ppl.includes(me) && !ro ? '<button type="button" class="textlink" data-shift="'+ds+'">Change my hours or add a note</button>' : "";
-  $("pickHint").textContent = p.closed ? "The wall is closed this day, so nobody can be put on." : ro ? "Past months are read-only." : "Tap a name to put them on or take them off. Everyone on gets the full shift hours.";
+  let more = ppl.includes(me) && !ro && !p.closed ? '<button type="button" class="textlink" data-shift="'+ds+'">Change my hours or add a note</button>' : "";
+  if (canClose(ds) && p.oneOff) more += '<button type="button" class="textlink" data-reopen>Reopen this day</button>';
+  else if (canClose(ds) && !p.closed){
+    if (closing){
+      const prev = $("closeReason") ? $("closeReason").value : "";
+      more += '<form class="closebox" id="closeForm" novalidate><label class="lbl" for="closeReason">Why is it closed? (optional)</label>'+
+        '<input type="text" id="closeReason" maxlength="200" autocomplete="off" placeholder="e.g. Bank holiday, private event" value="'+esc(prev)+'">'+
+        (ppl.length ? '<p class="hint">This takes '+esc(ppl.join(" and "))+' off the rota for this day.</p>' : '')+
+        '<div class="acts" style="margin-top:12px"><button type="button" class="danger" data-closecancel>Cancel</button><button type="submit" class="primary">Close this day</button></div></form>';
+    } else more += '<button type="button" class="textlink" data-closeday>Close the wall this day</button>';
+  }
+  $("pickMore").innerHTML = more;
+  $("pickHint").textContent = p.oneOff ? "Closed for this day only, so nobody can be put on."+(canClose(ds)?" Anyone can reopen it.":"")
+    : p.closed ? "The wall is closed this day, so nobody can be put on." : ro ? "Past months are read-only." : "Tap a name to put them on or take them off. Everyone on gets the full shift hours.";
 }
 $("pickBtns").addEventListener("click",e=>{
   const b = e.target.closest("[data-who]"); if (!b||!pickDay) return;
@@ -361,6 +380,28 @@ $("pickBtns").addEventListener("click",e=>{
   } else {
     state.rota.push({date:ds,person:who}); save(()=>api.addRota(ds,who)); toast((who===me?"You’re":who+" is")+" on "+fd(ds));
   }
+});
+
+$("pickMore").addEventListener("click",e=>{
+  if (!pickDay) return;
+  if (e.target.closest("[data-closeday]")){ closing = true; renderPicker(); $("closeReason").focus(); return; }
+  if (e.target.closest("[data-closecancel]")){ closing = false; renderPicker(); return; }
+  if (e.target.closest("[data-reopen]")){
+    const ds = pickDay; if (!canClose(ds) || !closureOn(ds)) return;
+    state.closures = state.closures.filter(c=>c.date!==ds); save(()=>api.reopenDay(ds)); toast(fd(ds)+" is open again");
+  }
+});
+$("pickMore").addEventListener("submit",e=>{
+  if (e.target.id!=="closeForm") return;
+  e.preventDefault();
+  const ds = pickDay; if (!ds || !canClose(ds) || shiftPattern(ds).closed) return;
+  const reason = $("closeReason").value.trim().slice(0,200), ppl = onDay(ds), calls = [];
+  ppl.forEach(q=>calls.push(()=>api.removeRota(ds,q)));
+  state.rota = state.rota.filter(r=>r.date!==ds);
+  if (state.shifts.some(s=>s.person===me && s.date===ds)){ state.shifts = state.shifts.filter(s=>!(s.person===me && s.date===ds)); calls.push(()=>api.deleteShift(me,ds)); }
+  state.closures = (state.closures||[]).filter(c=>c.date!==ds).concat({date:ds,reason});
+  calls.push(()=>api.closeDay(ds,reason));
+  closing = false; save(...calls); toast(fd(ds)+" closed");
 });
 
 /* ---------- costs ---------- */
@@ -440,7 +481,7 @@ document.addEventListener("click",e=>{
   const rp = e.target.closest("[data-rp]"); if (rp){ rotaOff = Math.min(0, rotaOff+Number(rp.dataset.rp)); renderRota(); return; }
   if (e.target.closest("#hoursCsv")){ hoursCsv(); return; }
   if (e.target.closest("#costCsv")){ costCsv(); return; }
-  if (e.target.closest("#exportAll")){ toast("Preparing 5 CSV files…"); exportAll().catch(()=>toast("Export failed – are you online?")); return; }
+  if (e.target.closest("#exportAll")){ toast("Preparing 6 CSV files…"); exportAll().catch(()=>toast("Export failed – are you online?")); return; }
   const dy = e.target.closest("[data-day]"); if (dy){ openPicker(dy.dataset.day); return; }
   const sb = e.target.closest("[data-shift]"); if (sb){ if ($("picker").open) $("picker").close(); if (onDay(sb.dataset.shift).includes(me)) openShift(sb.dataset.shift); return; }
   const lb = e.target.closest("[data-log]"); if (lb){ const l=state.logs.find(x=>x.id===lb.dataset.log && x.person===me); if (l) openLog({title:"Edit hours",edit:{kind:"log",id:l.id},cat:l.cat,date:l.date,hours:l.hours,note:l.note}); return; }
@@ -487,7 +528,7 @@ async function boot(){
     if (name){ me = name; store.set(ME_KEY, me); }
   }
   if (me){
-    const c = store.get(CACHE); if (c) state = c;
+    const c = store.get(CACHE); if (c) state = Object.assign({closures:[]}, c);
     $("home").hidden = false; render(); load();
   } else showLogin();
 }

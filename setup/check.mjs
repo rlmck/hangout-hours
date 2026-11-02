@@ -49,6 +49,13 @@ ok(!spoof.ok, "rota rows can't claim someone else added them");
 const rm = await rest(T.Patrick, "DELETE", "rota?date=eq." + D);
 ok(rm.ok && rm.data.length === 2, "Patrick can take both off");
 
+// closed days: anyone can close/reopen, nobody can fake who closed it
+ok((await rest(T.Patrick, "POST", "closures", { date: D, reason: "check" })).ok, "Patrick can close a day");
+ok(!(await rest(T.Baz, "POST", "closures", { date: "2099-06-02", created_by: "00000000-0000-0000-0000-000000000000" })).ok, "closures can't claim someone else closed it");
+ok(!(await rest(null, "POST", "closures", { date: "2099-06-03" })).ok, "signed-out visitors can't close a day");
+const reopen = await rest(T.Ross, "DELETE", "closures?date=eq." + D);
+ok(reopen.ok && reopen.data.length === 1, "Ross can reopen it");
+
 // logs: own only
 const forged = await rest(T.Baz, "POST", "logs", { person: "Ross", date: D, category: "other", hours: 1 });
 ok(!forged.ok, "Baz can't log hours as Ross");

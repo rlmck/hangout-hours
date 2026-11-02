@@ -5,6 +5,7 @@
  *
  * Shapes returned by loadAll():
  *   rota:     {date, person}
+ *   closures: {date, reason}                      (extra closed days on top of the weekly pattern)
  *   shifts:   {person, date, hours, note}          (hours = override or null)
  *   logs:     {id, person, date, cat, hours, note}
  *   expenses: {id, person, date, amount, description, status, reimbursedAt, method}
@@ -53,14 +54,16 @@ async function all(table, cols, order) {
 export async function loadAll() {
   const { data: { session } } = await db.auth.getSession();
   if (!session) throw new Error("AUTH");
-  const [rota, notes, logs, exp] = await Promise.all([
+  const [rota, notes, logs, exp, closures] = await Promise.all([
     all("rota", "date,person", "date"),
     all("shift_notes", "person,date,hours_override,note", "date"),
     all("logs", "id,person,date,category,hours,note", "date"),
-    all("expenses", "id,person,date,amount_gbp,description,status,reimbursed_at,reimbursed_method", "date")
+    all("expenses", "id,person,date,amount_gbp,description,status,reimbursed_at,reimbursed_method", "date"),
+    all("closures", "date,reason", "date").catch(e => { if (e.message === "AUTH") throw e; console.warn("closures:", e); return []; })  // table may not exist yet
   ]);
   return {
     rota: rota.map(r => ({ date: r.date, person: r.person })),
+    closures: closures.map(c => ({ date: c.date, reason: c.reason || "" })),
     shifts: notes.map(s => ({ person: s.person, date: s.date, hours: num(s.hours_override), note: s.note || "" })),
     logs: logs.map(l => ({ id: l.id, person: l.person, date: l.date, cat: l.category, hours: num(l.hours), note: l.note || "" })),
     expenses: exp.map(e => ({ id: e.id, person: e.person, date: e.date, amount: Number(e.amount_gbp), description: e.description,
@@ -74,6 +77,14 @@ export async function addRota(date, person) {
 }
 export async function removeRota(date, person) {
   check(await db.from("rota").delete().eq("date", date).eq("person", person));
+}
+
+/* ---------- closed days (anyone can close/reopen) ---------- */
+export async function closeDay(date, reason) {
+  check(await db.from("closures").upsert({ date, reason: reason || "" }, { onConflict: "date" }));
+}
+export async function reopenDay(date) {
+  check(await db.from("closures").delete().eq("date", date));
 }
 
 /* ---------- own shift notes / hours override ---------- */
@@ -109,17 +120,19 @@ export async function setReimbursed(id, method) {
 
 /* ---------- export: every table as rows shaped like Google Sheets tabs ---------- */
 export async function exportTables() {
-  const [people, rota, notes, logs, exp] = await Promise.all([
+  const [people, rota, notes, logs, exp, closures] = await Promise.all([
     all("profiles", "user_id,name", "name"),
     all("rota", "date,person,created_by,created_at", "date"),
     all("shift_notes", "person,date,hours_override,note", "date"),
     all("logs", "id,person,date,category,hours,note,created_at", "date"),
-    all("expenses", "id,person,date,amount_gbp,description,status,reimbursed_at,reimbursed_method,created_at", "date")
+    all("expenses", "id,person,date,amount_gbp,description,status,reimbursed_at,reimbursed_method,created_at", "date"),
+    all("closures", "date,reason,created_by,created_at", "date").catch(() => [])
   ]);
   const nameOf = Object.fromEntries(people.map(p => [p.user_id, p.name]));
   return {
     People: [["Name", "Email"], ...people.map(p => [p.name, p.name.toLowerCase() + "@" + EMAIL_DOMAIN])],
     Rota: [["Date", "Who", "Added by", "Added at"], ...rota.map(r => [r.date, r.person, nameOf[r.created_by] || "", r.created_at])],
+    Closed: [["Date", "Reason", "Closed by", "Closed at"], ...closures.map(c => [c.date, c.reason, nameOf[c.created_by] || "", c.created_at])],
     Logs: [["ID", "Person", "Date", "Type", "Hours", "Note", "Logged at"], ...logs.map(l => [l.id, l.person, l.date, l.category, l.hours, l.note, l.created_at])],
     Shifts: [["Person", "Date", "Hours override", "Note"], ...notes.map(s => [s.person, s.date, s.hours_override, s.note])],
     Expenses: [["ID", "Person", "Date", "Amount (GBP)", "Description", "Status", "Reimbursed at", "Reimbursed method", "Logged at"],

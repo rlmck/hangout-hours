@@ -35,7 +35,7 @@ Public sign-ups are switched off, so nobody else can create an account.
 
 - Everyone signed in can **see** everything: hours, shifts, costs, rota.
 - Each person can only add/edit/delete **their own** logs, shift notes and costs.
-- **Rota:** anyone can put anyone on or off any day.
+- **Rota:** anyone can put anyone on or off any day, and anyone can close or reopen a day.
 - **Costs:** only the person who logged a cost can mark it reimbursed or undo that. Costs can only be deleted while unpaid.
 
 Run `node setup/check.mjs` to test this against the live database (it uses dates in 2099 and tidies up after itself).
@@ -102,11 +102,18 @@ Older dates keep their old hours, so past totals never change. Each person on a 
 hours unless they've set their own hours on that shift (tap the day → "Change my hours or add a note").
 Closed days are greyed out in the rota and nobody can be put on them. Then redeploy.
 
+## Close a single day (bank holiday, private event, repairs)
+
+No code change needed: in the app, open **Rota** → tap the day → **Close the wall this day**, optionally add a reason,
+then **Close this day**. Anyone on the rota that day is taken off, and the day shows as closed for everyone.
+Tap it again → **Reopen this day** to undo. Only today and future days can be closed or reopened.
+These are stored in the `closures` table, separate from the weekly pattern above.
+
 ## Export to CSV / move to Google Sheets
 
 - **Hours** and **Costs** screens: "Download CSV" saves what the Me / Baz / Patrick / Everyone filter shows.
-- **Hours** screen: "Export all data" saves five files: `Hangout - People.csv`, `Rota`, `Logs`, `Shifts`, `Expenses`
-  (one per table, same columns as Google Sheets tabs). Best done on a computer.
+- **Hours** screen: "Export all data" saves six files: `Hangout - People.csv`, `Rota`, `Logs`, `Shifts`, `Expenses`
+  and `Closed` (one per table, same columns as Google Sheets tabs). Best done on a computer.
 - To move to a Google Sheet: make a sheet called "Hangout", then **File → Import → Upload** each CSV with
   "Insert new sheet(s)". To make the app use it, rewrite `api.js` only (same function names and return shapes); the UI doesn't change.
 - Supabase also has a table editor with "Export to CSV" for each table, and the schema is flat and plain.

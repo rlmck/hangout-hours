@@ -201,7 +201,9 @@ dialog::backdrop{ background:rgba(0,0,0,.4); }
 .methods{ display:grid; gap:8px; }
 .methods button{ background:var(--surface); border:1.5px solid var(--line); border-radius:14px; padding:13px 14px; font-size:16px; font-weight:700; }
 .shut{ display:block; width:100%; margin-top:14px; padding:13px; border-radius:14px; border:1.5px solid var(--line); text-align:center; font-weight:700; }
-.textlink{ color:var(--accent); font-weight:700; text-decoration:underline; font-size:15px; margin-top:12px; display:inline-block; }
+.textlink{ color:var(--accent); font-weight:700; text-decoration:underline; font-size:15px; margin-top:12px; display:block; }
+.closebox{ margin-top:14px; }
+.closebox .hint{ margin:10px 4px 0; }
 
 .toast{ position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:999px; font-size:15px; z-index:50; opacity:0; pointer-events:none; transition:opacity .2s; max-width:calc(100% - 32px); }
 .toast.show{ opacity:1; }

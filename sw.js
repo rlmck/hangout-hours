@@ -2,7 +2,7 @@
 // App files: network first (so updates show straight away), saved copy when offline.
 // Fonts and the Supabase library (fixed versions on CDNs): saved copy first.
 // Database calls are never cached here – the app keeps its own saved copy of the data.
-const CACHE = "hangout-hours-v1";
+const CACHE = "hangout-hours-v2";
 const SHELL = ["./", "index.html", "app.js", "api.js", "export.js", "config.js", "manifest.json", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

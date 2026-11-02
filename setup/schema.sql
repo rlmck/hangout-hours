@@ -50,6 +50,14 @@ create table if not exists public.expenses (
       or (status = 'reimbursed' and reimbursed_at is not null and reimbursed_method is not null))
 );
 
+-- Extra closed days (bank holidays, events, repairs), on top of the weekly pattern in app.js.
+create table if not exists public.closures (
+  date       date primary key,
+  reason     text not null default '' check (length(reason) <= 200),
+  created_by uuid default auth.uid() references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
 -- ---------- who am I? (the profile name of the signed-in user, or null) ----------
 create or replace function public.my_name() returns text
 language sql stable security definer set search_path = public
@@ -61,6 +69,7 @@ grant execute on function public.my_name() to authenticated;
 revoke all on all tables in schema public from anon, authenticated;
 grant select                         on public.profiles    to authenticated;
 grant select, insert, delete         on public.rota        to authenticated;
+grant select, insert, delete         on public.closures    to authenticated;
 grant select, insert, update, delete on public.shift_notes to authenticated;
 grant select, insert, update, delete on public.logs        to authenticated;
 grant select, insert, update, delete on public.expenses    to authenticated;
@@ -68,6 +77,7 @@ grant select, insert, update, delete on public.expenses    to authenticated;
 -- ---------- row level security ----------
 alter table public.profiles    enable row level security;
 alter table public.rota        enable row level security;
+alter table public.closures    enable row level security;
 alter table public.shift_notes enable row level security;
 alter table public.logs        enable row level security;
 alter table public.expenses    enable row level security;
@@ -77,6 +87,8 @@ drop policy if exists "staff read" on public.profiles;
 create policy "staff read" on public.profiles    for select to authenticated using (public.my_name() is not null);
 drop policy if exists "staff read" on public.rota;
 create policy "staff read" on public.rota        for select to authenticated using (public.my_name() is not null);
+drop policy if exists "staff read" on public.closures;
+create policy "staff read" on public.closures    for select to authenticated using (public.my_name() is not null);
 drop policy if exists "staff read" on public.shift_notes;
 create policy "staff read" on public.shift_notes for select to authenticated using (public.my_name() is not null);
 drop policy if exists "staff read" on public.logs;
@@ -90,6 +102,13 @@ create policy "staff add" on public.rota for insert to authenticated
   with check (public.my_name() is not null and created_by is not distinct from auth.uid());
 drop policy if exists "staff remove" on public.rota;
 create policy "staff remove" on public.rota for delete to authenticated using (public.my_name() is not null);
+
+-- Closed days are shared too: anyone can close or reopen a day.
+drop policy if exists "staff add" on public.closures;
+create policy "staff add" on public.closures for insert to authenticated
+  with check (public.my_name() is not null and created_by is not distinct from auth.uid());
+drop policy if exists "staff remove" on public.closures;
+create policy "staff remove" on public.closures for delete to authenticated using (public.my_name() is not null);
 
 -- Shift notes, logs and costs: only your own.
 drop policy if exists "own insert" on public.shift_notes;
